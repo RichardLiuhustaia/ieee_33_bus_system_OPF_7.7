@@ -15,6 +15,7 @@ branch_P=[model.addVar(lb=-GRB.INFINITY,ub=GRB.INFINITY,vtype=GRB.CONTINUOUS,nam
 branch_Q=[model.addVar(lb=-GRB.INFINITY,ub=GRB.INFINITY,vtype=GRB.CONTINUOUS,name=f'branch_Q_{i+1}') for i in range(32)]
 branch_square_currents=[model.addVar(lb=0,ub=GRB.INFINITY,vtype=GRB.CONTINUOUS,name=f'branch_square_currents_{i+1}') for i in range(32)]
 
+####
 #branch_P/Q[0]-branch_P/Q[16]:1->2至17->18
 #branch_P/Q[17]-branch[20]:2->19至21->22
 #branch[21]-branch[23]:3->23至24->25
