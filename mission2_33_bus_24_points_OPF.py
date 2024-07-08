@@ -23,7 +23,7 @@ for i in range(32):
     tmp_bus_square_voltage=model2.addVars(24,lb=Vmin*Vmin,ub=Vmax*Vmax,vtype=GRB.CONTINUOUS,name=f'bus_square_voltage_{i+1}')
     tmp_branch_p=model2.addVars(24,lb=-GRB.INFINITY,ub=GRB.INFINITY,vtype=GRB.CONTINUOUS,name=f'branch_P_{i+1}')
     tmp_branch_q=model2.addVars(24,lb=-GRB.INFINITY,ub=GRB.INFINITY,vtype=GRB.CONTINUOUS,name=f'branch_Q_{i+1}')
-    tmp_branch_square_current=model2.addVars(24,lb=-GRB.INFINITY,ub=GRB.INFINITY,vtype=GRB.CONTINUOUS,name=f'branch_square_{i+1}')
+    tmp_branch_square_current=model2.addVars(24,lb=0,ub=4e4,vtype=GRB.CONTINUOUS,name=f'branch_square_{i+1}')
     bus_square_voltages.append(tmp_bus_square_voltage)
     branch_P.append(tmp_branch_p)
     branch_Q.append(tmp_branch_q)
@@ -45,8 +45,8 @@ for i in range(24):
     model2.addConstr(1e6*bus_square_voltages[0][i]==1e6*Vm*Vm-2*1e3*(branch_r[0]*branch_P[0][i]+branch_x[0]*branch_Q[0][i])
                     +(branch_r[0]*branch_r[0]+branch_x[0]*branch_x[0])*branch_square_currents[0][i])
     #流入节点功率+节点自身功率=流出节点功率+负荷
-    model2.addConstr(branch_P[0][i]+gen_Ps[0][i]==bus_Pd[0]*pq_ratio[i]+branch_P[1][i]+branch_P[17][i])
-    model2.addConstr(branch_Q[0][i]+gen_Qs[0][i]==bus_Qd[0]*pq_ratio[i]+branch_Q[1][i]+branch_Q[17][i])
+    model2.addConstr(branch_P[0][i]+gen_Ps[0][i]-branch_square_currents[0][i]*branch_r[0]/1e3==bus_Pd[0]*pq_ratio[i]+branch_P[1][i]+branch_P[17][i])
+    model2.addConstr(branch_Q[0][i]+gen_Qs[0][i]-branch_square_currents[0][i]*branch_x[0]/1e3==bus_Qd[0]*pq_ratio[i]+branch_Q[1][i]+branch_Q[17][i])
     #线上电流关系
     model2.addQConstr(4*branch_P[0][i]**2+4*branch_Q[0][i]**2+(branch_square_currents[0][i]-Vm*Vm)**2<=
                     (branch_square_currents[0][i]+Vm*Vm)**2)
@@ -55,8 +55,8 @@ for i in range(24):
     model2.addConstr(1e6*bus_square_voltages[1][i]==1e6*bus_square_voltages[0][i]-2*1e3*(branch_r[1]*branch_P[1][i]+branch_x[1]*branch_Q[1][i])
                     +(branch_r[1]*branch_r[1]+branch_x[1]*branch_x[1])*branch_square_currents[1][i])
     #流入节点功率+节点自身功率=流出节点功率+负荷
-    model2.addConstr(branch_P[1][i]+gen_Ps[1][i]==bus_Pd[1]*pq_ratio[i]+branch_P[2][i]+branch_P[21][i])
-    model2.addConstr(branch_Q[1][i]+gen_Qs[1][i]==bus_Qd[1]*pq_ratio[i]+branch_Q[2][i]+branch_Q[21][i])
+    model2.addConstr(branch_P[1][i]+gen_Ps[1][i]-branch_square_currents[1][i]*branch_r[1]/1e3==bus_Pd[1]*pq_ratio[i]+branch_P[2][i]+branch_P[21][i])
+    model2.addConstr(branch_Q[1][i]+gen_Qs[1][i]-branch_square_currents[1][i]*branch_x[1]/1e3==bus_Qd[1]*pq_ratio[i]+branch_Q[2][i]+branch_Q[21][i])
     #线上电流关系
     model2.addQConstr(4*branch_P[1][i]**2+4*branch_Q[1][i]**2+(branch_square_currents[1][i]-bus_square_voltages[0][i])**2<=
                     (branch_square_currents[1][i]+bus_square_voltages[0][i])**2)
@@ -65,8 +65,8 @@ for i in range(24):
     model2.addConstr(1e6*bus_square_voltages[2][i]==1e6*bus_square_voltages[1][i]-2*1e3*(branch_r[2]*branch_P[2][i]+branch_x[2]*branch_Q[2][i])
                     +(branch_r[2]*branch_r[2]+branch_x[2]*branch_x[2])*branch_square_currents[2][i])
     #流入节点功率+节点自身功率=流出节点功率+负荷
-    model2.addConstr(branch_P[2][i]==bus_Pd[2]*pq_ratio[i]+branch_P[3][i])
-    model2.addConstr(branch_Q[2][i]==bus_Qd[2]*pq_ratio[i]+branch_Q[3][i])
+    model2.addConstr(branch_P[2][i]-branch_square_currents[2][i]*branch_r[2]/1e3==bus_Pd[2]*pq_ratio[i]+branch_P[3][i])
+    model2.addConstr(branch_Q[2][i]-branch_square_currents[2][i]*branch_x[2]/1e3==bus_Qd[2]*pq_ratio[i]+branch_Q[3][i])
     #线上电流关系
     model2.addQConstr(4*branch_P[2][i]**2+4*branch_Q[2][i]**2+(branch_square_currents[2][i]-bus_square_voltages[1][i])**2<=
                     (branch_square_currents[2][i]+bus_square_voltages[1][i])**2)
@@ -75,8 +75,8 @@ for i in range(24):
     model2.addConstr(1e6*bus_square_voltages[3][i]==1e6*bus_square_voltages[2][i]-2*1e3*(branch_r[3]*branch_P[3][i]+branch_x[3]*branch_Q[3][i])
                     +(branch_r[3]*branch_r[3]+branch_x[3]*branch_x[3])*branch_square_currents[3][i])
     #流入节点功率+节点自身功率=流出节点功率+负荷
-    model2.addConstr(branch_P[3][i]==bus_Pd[3]*pq_ratio[i]+branch_P[4][i])
-    model2.addConstr(branch_Q[3][i]==bus_Qd[3]*pq_ratio[i]+branch_Q[4][i])
+    model2.addConstr(branch_P[3][i]-branch_square_currents[3][i]*branch_r[3]/1e3==bus_Pd[3]*pq_ratio[i]+branch_P[4][i])
+    model2.addConstr(branch_Q[3][i]-branch_square_currents[3][i]*branch_x[3]/1e3==bus_Qd[3]*pq_ratio[i]+branch_Q[4][i])
     #线上电流关系
     model2.addQConstr(4*branch_P[3][i]**2+4*branch_Q[3][i]**2+(branch_square_currents[3][i]-bus_square_voltages[2][i])**2<=
                     (branch_square_currents[3][i]+bus_square_voltages[2][i])**2)
@@ -85,8 +85,8 @@ for i in range(24):
     model2.addConstr(1e6*bus_square_voltages[4][i]==1e6*bus_square_voltages[3][i]-2*1e3*(branch_r[4]*branch_P[4][i]+branch_x[4]*branch_Q[4][i])
                     +(branch_r[4]*branch_r[4]+branch_x[4]*branch_x[4])*branch_square_currents[4][i])
     #流入节点功率+节点自身功率=流出节点功率+负荷
-    model2.addConstr(branch_P[4][i]+gen_Ps[2][i]==bus_Pd[4]*pq_ratio[i]+branch_P[5][i]+branch_P[24][i])
-    model2.addConstr(branch_Q[4][i]+gen_Qs[2][i]==bus_Qd[4]*pq_ratio[i]+branch_Q[5][i]+branch_Q[24][i])
+    model2.addConstr(branch_P[4][i]+gen_Ps[2][i]-branch_square_currents[4][i]*branch_r[4]/1e3==bus_Pd[4]*pq_ratio[i]+branch_P[5][i]+branch_P[24][i])
+    model2.addConstr(branch_Q[4][i]+gen_Qs[2][i]-branch_square_currents[4][i]*branch_x[4]/1e3==bus_Qd[4]*pq_ratio[i]+branch_Q[5][i]+branch_Q[24][i])
     #线上电流关系
     model2.addQConstr(4*branch_P[4][i]**2+4*branch_Q[4][i]**2+(branch_square_currents[4][i]-bus_square_voltages[3][i])**2<=
                     (branch_square_currents[4][i]+bus_square_voltages[3][i])**2)
@@ -97,8 +97,8 @@ for j in range(7,18):
         model2.addConstr(1e6*bus_square_voltages[j-2][i]==1e6*bus_square_voltages[j-3][i]-2*1e3*(branch_r[j-2]*branch_P[j-2][i]+branch_x[j-2]*branch_Q[j-2][i])
                     +(branch_r[j-2]*branch_r[j-2]+branch_x[j-2]*branch_x[j-2])*branch_square_currents[j-2][i])
         #流入节点功率+节点自身功率=流出节点功率+负荷
-        model2.addConstr(branch_P[j-2][i]==bus_Pd[j-2]*pq_ratio[i]+branch_P[j-1][i])
-        model2.addConstr(branch_Q[j-2][i]==bus_Qd[j-2]*pq_ratio[i]+branch_Q[j-1][i])
+        model2.addConstr(branch_P[j-2][i]-branch_square_currents[j-2][i]*branch_r[j-2]/1e3==bus_Pd[j-2]*pq_ratio[i]+branch_P[j-1][i])
+        model2.addConstr(branch_Q[j-2][i]-branch_square_currents[j-2][i]*branch_x[j-2]/1e3==bus_Qd[j-2]*pq_ratio[i]+branch_Q[j-1][i])
         #线上电流关系
         model2.addQConstr(4*branch_P[j-2][i]**2+4*branch_Q[j-2][i]**2+(branch_square_currents[j-2][i]-bus_square_voltages[j-3][i])**2<=
                         (branch_square_currents[j-2][i]+bus_square_voltages[j-3][i])**2)
@@ -107,8 +107,8 @@ for i in range(24):
     model2.addConstr(1e6*bus_square_voltages[16][i]==1e6*bus_square_voltages[15][i]-2*1e3*(branch_r[16]*branch_P[16][i]+branch_x[16]*branch_Q[16][i])
                     +(branch_r[16]*branch_r[16]+branch_x[16]*branch_x[16])*branch_square_currents[16][i])
     #流入节点功率+节点自身功率=流出节点功率+负荷
-    model2.addConstr(branch_P[16][i]==bus_Pd[16]*pq_ratio[i])
-    model2.addConstr(branch_Q[16][i]==bus_Qd[16]*pq_ratio[i])
+    model2.addConstr(branch_P[16][i]-branch_square_currents[16][i]*branch_r[16]/1e3==bus_Pd[16]*pq_ratio[i])
+    model2.addConstr(branch_Q[16][i]-branch_square_currents[16][i]*branch_x[16]/1e3==bus_Qd[16]*pq_ratio[i])
     #线上电流关系
     model2.addQConstr(4*branch_P[16][i]**2+4*branch_Q[16][i]**2+(branch_square_currents[16][i]-bus_square_voltages[15][i])**2<=
                     (branch_square_currents[16][i]+bus_square_voltages[15][i])**2)
@@ -118,32 +118,32 @@ for i in range(24):
 for i in range(24):
     model2.addConstr(1e6*bus_square_voltages[17][i]==1e6*bus_square_voltages[0][i]-2*1e3*(branch_r[17]*branch_P[17][i]+branch_x[17]*branch_Q[17][i])
                     +(branch_r[17]*branch_r[17]+branch_x[17]*branch_x[17])*branch_square_currents[17][i])
-    model2.addConstr(branch_P[17][i]==bus_Pd[17]*pq_ratio[i]+branch_P[18][i])
-    model2.addConstr(branch_Q[17][i]==bus_Qd[17]*pq_ratio[i]+branch_Q[18][i])
+    model2.addConstr(branch_P[17][i]-branch_square_currents[17][i]*branch_r[17]/1e3==bus_Pd[17]*pq_ratio[i]+branch_P[18][i])
+    model2.addConstr(branch_Q[17][i]-branch_square_currents[17][i]*branch_x[17]/1e3==bus_Qd[17]*pq_ratio[i]+branch_Q[18][i])
     model2.addQConstr(4*branch_P[17][i]**2+4*branch_Q[17][i]**2+(branch_square_currents[17][i]-bus_square_voltages[0][i])**2<=
                     (branch_square_currents[17][i]+bus_square_voltages[0][i])**2)
 #节点20
 for i in range(24):
     model2.addConstr(1e6*bus_square_voltages[18][i]==1e6*bus_square_voltages[17][i]-2*1e3*(branch_r[18]*branch_P[18][i]+branch_x[18]*branch_Q[18][i])
                     +(branch_r[18]*branch_r[18]+branch_x[18]*branch_x[18])*branch_square_currents[18][i])
-    model2.addConstr(branch_P[18][i]==bus_Pd[18]*pq_ratio[i]+branch_P[19][i])
-    model2.addConstr(branch_Q[18][i]==bus_Qd[18]*pq_ratio[i]+branch_Q[19][i])
+    model2.addConstr(branch_P[18][i]-branch_square_currents[18][i]*branch_r[18]/1e3==bus_Pd[18]*pq_ratio[i]+branch_P[19][i])
+    model2.addConstr(branch_Q[18][i]-branch_square_currents[18][i]*branch_x[18]/1e3==bus_Qd[18]*pq_ratio[i]+branch_Q[19][i])
     model2.addQConstr(4*branch_P[18][i]**2+4*branch_Q[18][i]**2+(branch_square_currents[18][i]-bus_square_voltages[17][i])**2<=
                     (branch_square_currents[18][i]+bus_square_voltages[17][i])**2)
 #节点21
 for i in range(24):
     model2.addConstr(1e6*bus_square_voltages[19][i]==1e6*bus_square_voltages[18][i]-2*1e3*(branch_r[19]*branch_P[19][i]+branch_x[19]*branch_Q[19][i])
                     +(branch_r[19]*branch_r[19]+branch_x[19]*branch_x[19])*branch_square_currents[19][i])
-    model2.addConstr(branch_P[19][i]==bus_Pd[19]*pq_ratio[i]+branch_P[20][i])
-    model2.addConstr(branch_Q[19][i]==bus_Qd[19]*pq_ratio[i]+branch_Q[20][i])
+    model2.addConstr(branch_P[19][i]-branch_square_currents[19][i]*branch_r[19]/1e3==bus_Pd[19]*pq_ratio[i]+branch_P[20][i])
+    model2.addConstr(branch_Q[19][i]-branch_square_currents[19][i]*branch_x[19]/1e3==bus_Qd[19]*pq_ratio[i]+branch_Q[20][i])
     model2.addQConstr(4*branch_P[19][i]**2+4*branch_Q[19][i]**2+(branch_square_currents[19][i]-bus_square_voltages[18][i])**2<=
                     (branch_square_currents[19][i]+bus_square_voltages[18][i])**2)
 #节点22
 for i in range(24):
     model2.addConstr(1e6*bus_square_voltages[20][i]==1e6*bus_square_voltages[19][i]-2*1e3*(branch_r[20]*branch_P[20][i]+branch_x[20]*branch_Q[20][i])
                     +(branch_r[20]*branch_r[20]+branch_x[20]*branch_x[20])*branch_square_currents[20][i])
-    model2.addConstr(branch_P[20][i]==bus_Pd[20]*pq_ratio[i])
-    model2.addConstr(branch_Q[20][i]==bus_Qd[20]*pq_ratio[i])
+    model2.addConstr(branch_P[20][i]-branch_square_currents[20][i]*branch_r[20]/1e3==bus_Pd[20]*pq_ratio[i])
+    model2.addConstr(branch_Q[20][i]-branch_square_currents[20][i]*branch_x[20]/1e3==bus_Qd[20]*pq_ratio[i])
     model2.addQConstr(4*branch_P[20][i]**2+4*branch_Q[20][i]**2+(branch_square_currents[20][i]-bus_square_voltages[19][i])**2<=
                     (branch_square_currents[20][i]+bus_square_voltages[19][i])**2)
 
@@ -152,24 +152,24 @@ for i in range(24):
 for i in range(24):
     model2.addConstr(1e6*bus_square_voltages[21][i]==1e6*bus_square_voltages[1][i]-2*1e3*(branch_r[21]*branch_P[21][i]+branch_x[21]*branch_Q[21][i])
                     +(branch_r[21]*branch_r[21]+branch_x[21]*branch_x[21])*branch_square_currents[21][i])
-    model2.addConstr(branch_P[21][i]==bus_Pd[21]*pq_ratio[i]+branch_P[22][i])
-    model2.addConstr(branch_Q[21][i]==bus_Qd[21]*pq_ratio[i]+branch_Q[22][i])
+    model2.addConstr(branch_P[21][i]-branch_square_currents[21][i]*branch_r[21]/1e3==bus_Pd[21]*pq_ratio[i]+branch_P[22][i])
+    model2.addConstr(branch_Q[21][i]-branch_square_currents[21][i]*branch_x[21]/1e3==bus_Qd[21]*pq_ratio[i]+branch_Q[22][i])
     model2.addQConstr(4*branch_P[21][i]**2+4*branch_Q[21][i]**2+(branch_square_currents[21][i]-bus_square_voltages[1][i])**2<=
                     (branch_square_currents[21][i]+bus_square_voltages[1][i])**2)
 #节点24
 for i in range(24):
     model2.addConstr(1e6*bus_square_voltages[22][i]==1e6*bus_square_voltages[21][i]-2*1e3*(branch_r[22]*branch_P[22][i]+branch_x[22]*branch_Q[22][i])
                     +(branch_r[22]*branch_r[22]+branch_x[22]*branch_x[22])*branch_square_currents[22][i])
-    model2.addConstr(branch_P[22][i]==bus_Pd[22]*pq_ratio[i]+branch_P[23][i])
-    model2.addConstr(branch_Q[22][i]==bus_Qd[22]*pq_ratio[i]+branch_Q[23][i])
+    model2.addConstr(branch_P[22][i]-branch_square_currents[22][i]*branch_r[22]/1e3==bus_Pd[22]*pq_ratio[i]+branch_P[23][i])
+    model2.addConstr(branch_Q[22][i]-branch_square_currents[22][i]*branch_x[22]/1e3==bus_Qd[22]*pq_ratio[i]+branch_Q[23][i])
     model2.addQConstr(4*branch_P[22][i]**2+4*branch_Q[22][i]**2+(branch_square_currents[22][i]-bus_square_voltages[21][i])**2<=
                     (branch_square_currents[22][i]+bus_square_voltages[21][i])**2)
 #节点25
 for i in range(24):
     model2.addConstr(1e6*bus_square_voltages[23][i]==1e6*bus_square_voltages[22][i]-2*1e3*(branch_r[23]*branch_P[23][i]+branch_x[23]*branch_Q[23][i])
                     +(branch_r[23]*branch_r[23]+branch_x[23]*branch_x[23])*branch_square_currents[23][i])
-    model2.addConstr(branch_P[23][i]==bus_Pd[23]*pq_ratio[i])
-    model2.addConstr(branch_Q[23][i]==bus_Qd[23]*pq_ratio[i])
+    model2.addConstr(branch_P[23][i]-branch_square_currents[23][i]*branch_r[23]/1e3==bus_Pd[23]*pq_ratio[i])
+    model2.addConstr(branch_Q[23][i]-branch_square_currents[23][i]*branch_x[23]/1e3==bus_Qd[23]*pq_ratio[i])
     model2.addQConstr(4*branch_P[23][i]**2+4*branch_Q[23][i]**2+(branch_square_currents[23][i]-bus_square_voltages[22][i])**2<=
                     (branch_square_currents[23][i]+bus_square_voltages[22][i])**2)
 
@@ -178,8 +178,8 @@ for i in range(24):
 for i in range(24):
     model2.addConstr(1e6*bus_square_voltages[24][i]==1e6*bus_square_voltages[4][i]-2*1e3*(branch_r[24]*branch_P[24][i]+branch_x[24]*branch_Q[24][i])
                     +(branch_r[24]*branch_r[24]+branch_x[24]*branch_x[24])*branch_square_currents[24][i])
-    model2.addConstr(branch_P[24][i]==bus_Pd[24]*pq_ratio[i]+branch_P[25][i])
-    model2.addConstr(branch_Q[24][i]==bus_Qd[24]*pq_ratio[i]+branch_Q[25][i])
+    model2.addConstr(branch_P[24][i]-branch_square_currents[24][i]*branch_r[24]/1e3==bus_Pd[24]*pq_ratio[i]+branch_P[25][i])
+    model2.addConstr(branch_Q[24][i]-branch_square_currents[24][i]*branch_x[24]/1e3==bus_Qd[24]*pq_ratio[i]+branch_Q[25][i])
     model2.addQConstr(4*branch_P[24][i]**2+4*branch_Q[24][i]**2+(branch_square_currents[24][i]-bus_square_voltages[4][i])**2<=
                     (branch_square_currents[24][i]+bus_square_voltages[4][i])**2)
 #节点27到节点32
@@ -188,8 +188,8 @@ for j in range(27,33):
         model2.addConstr(1e6*bus_square_voltages[j-2][i]==1e6*bus_square_voltages[j-3][i]-2*1e3*(branch_r[j-2]*branch_P[j-2][i]+branch_x[j-2]*branch_Q[j-2][i])
                     +(branch_r[j-2]*branch_r[j-2]+branch_x[j-2]*branch_x[j-2])*branch_square_currents[j-2][i])
         #流入节点功率+节点自身功率=流出节点功率+负荷
-        model2.addConstr(branch_P[j-2][i]==bus_Pd[j-2]*pq_ratio[i]+branch_P[j-1][i])
-        model2.addConstr(branch_Q[j-2][i]==bus_Qd[j-2]*pq_ratio[i]+branch_Q[j-1][i])
+        model2.addConstr(branch_P[j-2][i]-branch_square_currents[j-2][i]*branch_r[j-2]/1e3==bus_Pd[j-2]*pq_ratio[i]+branch_P[j-1][i])
+        model2.addConstr(branch_Q[j-2][i]-branch_square_currents[j-2][i]*branch_x[j-2]/1e3==bus_Qd[j-2]*pq_ratio[i]+branch_Q[j-1][i])
         #线上电流关系
         model2.addQConstr(4*branch_P[j-2][i]**2+4*branch_Q[j-2][2]**2+(branch_square_currents[j-2][i]-bus_square_voltages[j-3][i])**2<=
                         (branch_square_currents[j-2][i]+bus_square_voltages[j-3][i])**2)
@@ -197,8 +197,8 @@ for j in range(27,33):
 for i in range(24):
     model2.addConstr(1e6*bus_square_voltages[31][i]==1e6*bus_square_voltages[30][i]-2*1e3*(branch_r[31]*branch_P[31][i]+branch_x[31]*branch_Q[31][i])
                     +(branch_r[31]*branch_r[31]+branch_x[31]*branch_x[31])*branch_square_currents[31][i])
-    model2.addConstr(branch_P[31][i]==bus_Pd[31]*pq_ratio[i])
-    model2.addConstr(branch_Q[31][i]==bus_Qd[31]*pq_ratio[i])
+    model2.addConstr(branch_P[31][i]-branch_square_currents[31][i]*branch_r[31]/1e3==bus_Pd[31]*pq_ratio[i])
+    model2.addConstr(branch_Q[31][i]-branch_square_currents[31][i]*branch_x[31]/1e3==bus_Qd[31]*pq_ratio[i])
     model2.addQConstr(4*branch_P[31][i]**2+4*branch_Q[31][i]**2+(branch_square_currents[31][i]-bus_square_voltages[30][i])**2<=
                     (branch_square_currents[31][i]+bus_square_voltages[30][i])**2)
     

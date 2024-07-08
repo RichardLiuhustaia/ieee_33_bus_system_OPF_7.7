@@ -86,3 +86,6 @@ branch_data=np.array(branch_data)
 branchs=branch_data[:,0:2]
 branch_r=branch_data[:,2]
 branch_x=branch_data[:,3]
+
+#数据来自matpower7.1 IEEE33bw.m
+######
