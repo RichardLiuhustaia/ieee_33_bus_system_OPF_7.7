@@ -23,7 +23,7 @@ for i in range(32):
     tmp_bus_square_voltage=model2.addVars(24,lb=Vmin*Vmin,ub=Vmax*Vmax,vtype=GRB.CONTINUOUS,name=f'bus_square_voltage_{i+1}')
     tmp_branch_p=model2.addVars(24,lb=-GRB.INFINITY,ub=GRB.INFINITY,vtype=GRB.CONTINUOUS,name=f'branch_P_{i+1}')
     tmp_branch_q=model2.addVars(24,lb=-GRB.INFINITY,ub=GRB.INFINITY,vtype=GRB.CONTINUOUS,name=f'branch_Q_{i+1}')
-    tmp_branch_square_current=model2.addVars(24,lb=0,ub=4e4,vtype=GRB.CONTINUOUS,name=f'branch_square_{i+1}')
+    tmp_branch_square_current=model2.addVars(24,lb=0,ub=1e4,vtype=GRB.CONTINUOUS,name=f'branch_square_{i+1}')
     bus_square_voltages.append(tmp_bus_square_voltage)
     branch_P.append(tmp_branch_p)
     branch_Q.append(tmp_branch_q)
