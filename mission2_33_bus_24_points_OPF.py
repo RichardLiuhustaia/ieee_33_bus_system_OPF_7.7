@@ -15,15 +15,15 @@ model2=gp.Model('24 point OPF')
 #声明各个决策变量，每一个24维的变量表示该节点/电机/线路24个小时中每小时的功率
 gen_Ps,gen_Qs,bus_square_voltages,branch_P,branch_Q,branch_square_currents=[],[],[],[],[],[]
 for i in range(3):
-    tmp_p=model2.addVars(24,lb=0,ub=2000,vtype=GRB.CONTINUOUS,name=f'generator_p_{i+1}')
-    tmp_q=model2.addVars(24,lb=0,ub=2000,vtype=GRB.CONTINUOUS,name=f'generator_q_{i+1}')
+    tmp_p=model2.addVars(24,lb=0,ub=4000,vtype=GRB.CONTINUOUS,name=f'generator_p_{i+1}')
+    tmp_q=model2.addVars(24,lb=0,ub=4000,vtype=GRB.CONTINUOUS,name=f'generator_q_{i+1}')
     gen_Ps.append(tmp_p)
     gen_Qs.append(tmp_q)
 for i in range(32):
     tmp_bus_square_voltage=model2.addVars(24,lb=Vmin*Vmin,ub=Vmax*Vmax,vtype=GRB.CONTINUOUS,name=f'bus_square_voltage_{i+1}')
     tmp_branch_p=model2.addVars(24,lb=-GRB.INFINITY,ub=GRB.INFINITY,vtype=GRB.CONTINUOUS,name=f'branch_P_{i+1}')
     tmp_branch_q=model2.addVars(24,lb=-GRB.INFINITY,ub=GRB.INFINITY,vtype=GRB.CONTINUOUS,name=f'branch_Q_{i+1}')
-    tmp_branch_square_current=model2.addVars(24,lb=0,ub=1e4,vtype=GRB.CONTINUOUS,name=f'branch_square_{i+1}')
+    tmp_branch_square_current=model2.addVars(24,lb=0,ub=4e4,vtype=GRB.CONTINUOUS,name=f'branch_square_{i+1}')
     bus_square_voltages.append(tmp_bus_square_voltage)
     branch_P.append(tmp_branch_p)
     branch_Q.append(tmp_branch_q)
@@ -32,10 +32,10 @@ for i in range(32):
 #发电机爬坡功率约束,设发电机爬坡能力为400kW/h
 for i in range(3):
     for j in range(1,24):
-        model2.addConstr(gen_Ps[i][j]-gen_Ps[i][j-1]<=400)
-        model2.addConstr(gen_Ps[i][j]-gen_Ps[i][j-1]>=-400)
-        model2.addConstr(gen_Qs[i][j]-gen_Qs[i][j-1]<=400)
-        model2.addConstr(gen_Qs[i][j]-gen_Qs[i][j-1]>=-400)
+        model2.addConstr(gen_Ps[i][j]-gen_Ps[i][j-1]<=800)
+        model2.addConstr(gen_Ps[i][j]-gen_Ps[i][j-1]>=-800)
+        model2.addConstr(gen_Qs[i][j]-gen_Qs[i][j-1]<=800)
+        model2.addConstr(gen_Qs[i][j]-gen_Qs[i][j-1]>=-800)
 #主线
 #节点2
 #后一个节点电压=前一个节点电压和功率、电流的关系

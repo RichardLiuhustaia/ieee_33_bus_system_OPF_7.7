@@ -8,6 +8,7 @@ from sklearn.metrics import mutual_info_score
 import matplotlib.pyplot as plt
 from scipy.stats import norm
 import warnings
+from scipy.interpolate import interp1d
 
 warnings.filterwarnings('ignore')
 
@@ -139,12 +140,18 @@ def solve_gmm_quantile(data,weights,means,covariances,epsilon,n_samples=20000):
     for i in range(n_samples):
         if abs(gmm_cdf(x_points[i],weights,means,covariances)-approaching_target)<=abs(gmm_cdf(x_points[i+1],weights,means,covariances)-approaching_target):
             return x_points[i]
-        
 
-#下面求出96点中每个时间点的PV、数据处理负荷预测偏差的分位点
-PV_data=pd.read_csv('ods032.csv').fillna(0)
-PV_forecast=np.flip(PV_data['Measured & Upscaled'].to_numpy())
-PV_real_time=np.flip(PV_data['Most recent forecast'].to_numpy())
+def get_96point_WT_quantiles(forecast_value,real_value,confidence_level):
+    WT_quantiles=[]
+    for i in range(96):
+        delta_WT=real_value[i]-forecast_value[i]
+        delta_WT=np.expand_dims(delta_WT,axis=1)
+        gmm_WT,gmm_WT.means_,gmm_WT.covariances_,gmm_WT.weights_=EM_fit(delta_WT)
+        WT_quantile=solve_gmm_quantile(delta_WT,gmm_WT.weights_,gmm_WT.means_,gmm_WT.covariances_,confidence_level)
+        WT_quantiles.append(WT_quantile)
+        print(f'第{i+1}个分位点计算完成',i)
+    return np.array(WT_quantiles)
+
 #写一个函数，把这些数据分成96份，对应一天中96个时间点，并输出每个时间点对应的GMM分位点
 def get_96_subarrays(data):
     if not isinstance(data, np.ndarray):
@@ -169,28 +176,18 @@ def get_96_subarrays(data):
     
     return subarrays
 
-PV_96point_forecast=get_96_subarrays(PV_forecast)
-PV_96point_real_time=get_96_subarrays(PV_real_time)
+#下面求出96点中每个时间点的WT、数据处理负荷预测偏差的分位点
 
 def get_96point_PV_quantiles(forecast_value,real_value,confidence_level):
     PV_quantiles=[]
     for i in range(96):
-        delta_PV=forecast_value[i]-real_value[i]
+        delta_PV=real_value[i]-forecast_value[i]
         delta_PV=np.expand_dims(delta_PV,axis=1)
         gmm_PV,gmm_PV.means_,gmm_PV.covariances_,gmm_PV.weights_=EM_fit(delta_PV)
         PV_quantile=solve_gmm_quantile(delta_PV,gmm_PV.weights_,gmm_PV.means_,gmm_PV.covariances_,confidence_level)
         PV_quantiles.append(PV_quantile)
-        print(f'第{i+1}个分位点计算完成',i)
+        print(f'第{i+1}个分位点计算完成:',PV_quantile)
     return np.array(PV_quantiles)
-
-PV_96points_quantiles=get_96point_PV_quantiles(PV_96point_forecast,PV_96point_real_time,1-0.05)
-
-load_data=pd.read_csv('ods001.csv').fillna(0)
-load_forecast=np.flip(load_data['Total Load'][:-96].to_numpy())
-load_real_time=np.flip(load_data['Most recent forecast'][:-96].to_numpy())
-
-load_96point_forecast=get_96_subarrays(load_forecast)
-load_96point_real_time=get_96_subarrays(load_real_time)
 
 def get_96point_load_quantiles(forecast_value,real_value,confidence_level):
     load_quantiles=[]
@@ -205,4 +202,76 @@ def get_96point_load_quantiles(forecast_value,real_value,confidence_level):
         print(f'第{i+1}个分位点计算完成: ',load_quantile)
     return np.array(load_quantiles)
 
+def interpolate_data(data):
+    # Ensure input data length is 24
+    if len(data) != 24:
+        raise ValueError("Input array must have exactly 24 elements.")
+    
+    # Original x coordinates, from 0 to 23
+    x_original = np.arange(24)
+    
+    # New x coordinates, from 0 to 95, total 96 points
+    x_new = np.linspace(0, 24, 96)
+    
+    # Use linear interpolation function
+    f = interp1d(x_original, data, kind='linear', bounds_error=False, fill_value="extrapolate")
+    
+    # Interpolate and get new data
+    interpolated_data = f(x_new[:-3])  # Handle the first 93 points
+    
+    # Special handling for the last three points, using the first and last point of the original array for interpolation
+    last_point = data[-1]
+    first_point = data[0]
+    extended_x = np.array([24, 25, 26])
+    extended_y = np.array([last_point, first_point, first_point])
+    
+    # Extended interpolation function
+    f_extended = interp1d(extended_x, extended_y, kind='linear', bounds_error=False, fill_value="extrapolate")
+    
+    # Get the data for the last three points
+    last_three_points = f_extended(x_new[-3:])
+    
+    # Combine the two parts of data
+    final_data = np.concatenate((interpolated_data, last_three_points))
+    
+    return final_data
+
+WT_data=pd.read_csv('ods031.csv').fillna(0)
+WT_forecast=np.flip(WT_data['Measured & Upscaled'].to_numpy())*2
+WT_real_time=np.flip(WT_data['Most recent forecast'].to_numpy())*2
+
+
+WT_96point_forecast=get_96_subarrays(WT_forecast)
+WT_96point_real_time=get_96_subarrays(WT_real_time)
+
+
+
+WT_96points_quantiles=get_96point_WT_quantiles(WT_96point_forecast,WT_96point_real_time,1-0.05)
+
+
+load_data=pd.read_csv('ods001.csv').fillna(0)
+load_forecast=np.flip(load_data['Most recent forecast'].to_numpy())/10
+load_real_time=np.flip(load_data['Total Load'].to_numpy())/10
+
+
+load_96point_forecast=get_96_subarrays(load_forecast)
+load_96point_real_time=get_96_subarrays(load_real_time)
+
+
+
 load_96points_quantiles=get_96point_load_quantiles(load_96point_forecast,load_96point_real_time,0.05)
+
+
+WT_simulation=np.flip(WT_data['Measured & Upscaled'][-96:].to_numpy())*2
+
+PV_data=pd.read_csv('ods032.csv').fillna(0)
+PV_forecast=np.flip(PV_data['Measured & Upscaled'][:-96].to_numpy())
+PV_real_time=np.flip(PV_data['Most recent forecast'][:-96].to_numpy())
+
+PV_96point_forecast=get_96_subarrays(PV_forecast)
+PV_96point_real_time=get_96_subarrays(PV_real_time)
+
+
+
+PV_96points_quantiles=get_96point_PV_quantiles(PV_96point_forecast,PV_96point_real_time,1-0.05)
+PV_simulation=np.flip(PV_data['Measured & Upscaled'][-96:].to_numpy())
